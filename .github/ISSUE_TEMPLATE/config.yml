@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: ⬇️ Baixar a última build
+    url: https://github.com/luhno/yass-releases/releases/latest/download/yass.apk
+    about: Link direto para o yass.apk mais recente.
