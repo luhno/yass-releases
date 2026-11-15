@@ -1,0 +1,41 @@
+name: Etiquetar bug pela build
+
+# Lê o campo "Versão do YASS" do formulário de bug e põe a etiqueta build:<versão>.
+# A etiqueta é criada automaticamente se ainda não existir.
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.issue.body || "";
+            const m = body.match(/###\s*Versão do YASS\s*\n+\s*([^\n]+)/i);
+            if (!m) { core.info("Campo de versão não encontrado."); return; }
+            const v = m[1].match(/\d+(?:\.\d+){1,2}/);
+            if (!v) { core.info(`Versão não reconhecida: ${m[1]}`); return; }
+            const name = `build:${v[0]}`;
+            const { owner, repo } = context.repo;
+            try {
+              await github.rest.issues.getLabel({ owner, repo, name });
+            } catch (e) {
+              if (e.status !== 404) throw e;
+              await github.rest.issues.createLabel({ owner, repo, name, color: "5319e7",
+                description: `Relatado na build ${v[0]}` });
+            }
+            const current = context.payload.issue.labels.map(l => l.name);
+            const stale = current.filter(l => l.startsWith("build:") && l !== name);
+            for (const l of stale) {
+              await github.rest.issues.removeLabel({ owner, repo, issue_number: context.issue.number, name: l });
+            }
+            if (!current.includes(name)) {
+              await github.rest.issues.addLabels({ owner, repo, issue_number: context.issue.number, labels: [name] });
+            }
+            core.info(`Etiqueta ${name} aplicada.`);
